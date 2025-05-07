@@ -1,0 +1,12 @@
+#Planner
+Planner|https://planner.cloud.microsoft|Default
+
+#Admin
+Entra Admin|https://entra.microsoft.com|AdminAccount
+Microsoft 365 Admin|https://admin.microsoft.com|AdminAccount
+Security (Defender)|https://security.microsoft.com|AdminAccount
+Azure Portal|https://portal.azure.com|AdminAccount
+Exchange Admin|https://admin.exchange.microsoft.com|AdminAccount
+Compliance Center|https://compliance.microsoft.com|AdminAccount
+Intune|https://intune.microsoft.com|AdminAccount
+Microsoft Service Health|https://admin.microsoft.com/Adminportal/Home#/servicehealth|AdminAccount
