@@ -9,18 +9,6 @@ global flyoutWidth := 200
 global flyoutHeight := A_ScreenHeight
 global flyout
 
-; ===== GUI Setup =====
-flyout := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale", "Web Shortcuts")
-flyout.MarginX := 10
-flyout.MarginY := 10
-
-; Add Refresh Button
-refreshBtn := flyout.AddButton("w180", "🔄 Refresh Shortcuts")
-refreshBtn.OnEvent("Click", (*) => Reload())
-
-LoadShortcuts()
-flyout.Show("x-" flyoutWidth " y0 w" flyoutWidth " h" flyoutHeight)
-
 ; ===== Triple Ctrl Detection to Toggle Flyout =====
 ~Ctrl::
 {
@@ -48,37 +36,52 @@ ResetPressCount() {
 ToggleFlyout() {
     global flyout, showing, flyoutWidth, flyoutHeight
 
-    ; Move to primary screen, full height
-    primaryX := SysGet(76) ; SM_XVIRTUALSCREEN
-    primaryY := SysGet(77) ; SM_YVIRTUALSCREEN
-    screenH := SysGet(1)   ; SM_CYSCREEN
+    if !IsSet(flyout)
+        LoadShortcuts()
+
+    monitor := MonitorGetPrimary()
+    MonitorGetWorkArea(monitor, &left, &top, &right, &bottom)
+    primaryX := left
+    primaryY := top
+    screenH := bottom - top
     flyoutHeight := screenH
 
-    ; If already showing, bring to front and reposition
     if showing {
-        flyout.Move(primaryX, primaryY, flyoutWidth, flyoutHeight)
-        flyout.Opt("+AlwaysOnTop")
-        flyout.Show()
+        HideFlyout()
         return
     }
 
     showing := true
-    x := -flyoutWidth
-    targetX := primaryX
+    flyout.Move(primaryX, primaryY, 0, flyoutHeight)
+    flyout.Show()
 
-    ; Slide-in animation from left
-    loop 20 {
-        percent := A_Index / 20
-        curX := Round(x + (targetX - x) * percent)
-        flyout.Move(curX, primaryY, flyoutWidth, flyoutHeight)
+    steps := 20
+    loop steps {
+        curWidth := Round(flyoutWidth * A_Index / steps)
+        flyout.Move(primaryX, primaryY, curWidth, flyoutHeight)
         Sleep(10)
     }
-    flyout.Move(targetX, primaryY, flyoutWidth, flyoutHeight)
+
+    flyout.Move(primaryX, primaryY, flyoutWidth, flyoutHeight)
+}
+
+; ===== Instant Flyout Hide =====
+HideFlyout() {
+    global flyout, showing
+    flyout.Hide()
+    showing := false
 }
 
 ; ===== Shortcut Loader from File =====
 LoadShortcuts() {
     global flyout
+
+    flyout := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale", "Web Shortcuts")
+    flyout.MarginX := 10
+    flyout.MarginY := 10
+
+    refreshBtn := flyout.AddButton("w180", "🔄 Refresh Shortcuts")
+    refreshBtn.OnEvent("Click", (*) => Reload())
 
     shortcutsFile := A_ScriptDir "\shortcuts.txt"
     if FileExist(shortcutsFile) {
@@ -92,7 +95,7 @@ LoadShortcuts() {
 
             ; Category header line: starts with #
             if SubStr(line, 1, 1) = "#" {
-                flyout.AddText("x10 y" yOffset " w180 +0x200", SubStr(line, 2)) ; Bold label
+                flyout.AddText("x10 y" yOffset " w180 +0x200", SubStr(line, 2))
                 yOffset += 25
                 continue
             }
@@ -115,13 +118,35 @@ LoadShortcuts() {
     }
 }
 
-; ===== Creates a Shortcut Button with Bound Data =====
+; ===== Creates a Shortcut Button with Window Detection =====
 AddShortcutButton(label, url, profile, y) {
     global flyout
     btn := flyout.AddButton("x10 y" y " w180", label)
-    btn.OnEvent("Click", (*) => (
-        InStr(url, "edge://")
-            ? Run("msedge.exe --profile-directory=" profile " " url)
-            : Run("msedge.exe --app=" url " --profile-directory=" profile)
-    ))
+    btn.OnEvent("Click", (*) => TryActivateApp(label, url, profile))
+}
+
+; ===== Check if app window is open and activate or launch =====
+TryActivateApp(title, url, profile) {
+    global flyout, showing
+    SetTitleMatchMode(2)
+
+    hwnd := WinExist(title)
+    if hwnd {
+        if WinGetMinMax("ahk_id " hwnd) = 1
+            WinRestore("ahk_id " hwnd)
+        WinActivate("ahk_id " hwnd)
+        WinMaximize("ahk_id " hwnd)
+    } else {
+        Run('msedge.exe --app="' url '" --profile-directory="' profile '"')
+        WinWait(title, , 5)
+        hwnd := WinExist(title)
+        if hwnd {
+            WinActivate("ahk_id " hwnd)
+            WinMaximize("ahk_id " hwnd)
+        }
+    }
+
+    if showing {
+        HideFlyout()
+    }
 }
