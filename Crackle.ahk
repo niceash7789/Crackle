@@ -95,7 +95,7 @@ LoadShortcuts() {
 
             ; Category header line: starts with #
             if SubStr(line, 1, 1) = "#" {
-                flyout.AddText("x10 y" yOffset " w180 +0x200", SubStr(line, 2))
+                flyout.AddText("x10 y" yOffset " w180 +0x200", SubStr(line, 2)) ; Bold label
                 yOffset += 25
                 continue
             }
@@ -126,23 +126,27 @@ AddShortcutButton(label, url, profile, y) {
 }
 
 ; ===== Check if app window is open and activate or launch =====
-TryActivateApp(title, url, profile) {
+TryActivateApp(label, url, profile) {
     global flyout, showing
     SetTitleMatchMode(2)
 
-    hwnd := WinExist(title)
+    hwnd := WinExist(label)
     if hwnd {
-        if WinGetMinMax("ahk_id " hwnd) = 1
-            WinRestore("ahk_id " hwnd)
-        WinActivate("ahk_id " hwnd)
-        WinMaximize("ahk_id " hwnd)
+        WinTitle := "ahk_id " hwnd
+        if WinGetMinMax(WinTitle) = 1
+            WinRestore(WinTitle)
+        WinActivate(WinTitle)
+        WinMaximize(WinTitle)
     } else {
         Run('msedge.exe --app="' url '" --profile-directory="' profile '"')
-        WinWait(title, , 5)
-        hwnd := WinExist(title)
-        if hwnd {
-            WinActivate("ahk_id " hwnd)
-            WinMaximize("ahk_id " hwnd)
+        ; Wait up to 5 seconds for the window to appear
+        if WinWait(label, , 5) {
+            hwnd := WinExist(label)
+            if hwnd {
+                WinTitle := "ahk_id " hwnd
+                WinActivate(WinTitle)
+                WinMaximize(WinTitle)
+            }
         }
     }
 
