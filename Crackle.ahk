@@ -10,7 +10,7 @@ global flyoutHeight := A_ScreenHeight
 global flyout
 
 ; ===== Triple Ctrl Detection to Toggle Flyout =====
-~Ctrl::
+~Ctrl up::
 {
     global pressCount, lastPressTime
     now := A_TickCount
